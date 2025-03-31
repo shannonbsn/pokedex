@@ -1,40 +1,74 @@
-<script setup lang="ts">
-import { ref } from 'vue'
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import PokemonList from './PokemonList.vue';
+import PokemonFilter from './PokemonFilter.vue';
 
-defineProps<{ msg: string }>()
+const pokemons = ref([]);
+const selectedType = ref(null);
+const loading = ref(true);
 
+// Récupérer les Pokémon
+const fetchPokemons = async () => {
+  loading.value = true; // Début du chargement
+  selectedType.value = null; // Réinitialisation du filtre
+
+  try {
+    const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151');
+    const data = await response.json();
+
+    // Charger les détails de chaque Pokémon
+    const detailedPokemons = await Promise.all(
+      data.results.map(async (pokemon) => {
+        const res = await fetch(pokemon.url);
+        return await res.json();
+      })
+    );
+
+    pokemons.value = detailedPokemons;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des Pokémon', error);
+  } finally {
+    loading.value = false; // Fin du chargement
+  }
+};
+
+// Filtrer les Pokémon par type
+const filteredPokemons = computed(() => {
+  if (!selectedType.value) return pokemons.value;
+  return pokemons.value.filter(pokemon =>
+    pokemon.types.some(t => t.type.name === selectedType.value)
+  );
+});
+
+const filterPokemonsByType = (type) => {
+  selectedType.value = type;
+};
+
+onMounted(fetchPokemons);
 </script>
 
 <template>
-  <h1>{{ msg }}</h1>
+  <div>
+    <h1>Pokedex</h1>
+    <button @click="fetchPokemons">Recharger les Pokémon</button>
 
-  <div class="card">
-    <button type="button" @click="count++">count is {{ count }}</button>
-    <p>
-      Edit
-      <code>components/HelloWorld.vue</code> to test HMR
-    </p>
+    <PokemonFilter @filter="filterPokemonsByType" />
+
+    <div v-if="loading">Chargement...</div>
+
+    <PokemonList :pokemons="filteredPokemons" v-if="!loading" />
   </div>
-
-  <p>
-    Check out
-    <a href="https://vuejs.org/guide/quick-start.html#local" target="_blank"
-      >create-vue</a
-    >, the official Vue + Vite starter
-  </p>
-  <p>
-    Learn more about IDE Support for Vue in the
-    <a
-      href="https://vuejs.org/guide/scaling-up/tooling.html#ide-support"
-      target="_blank"
-      >Vue Docs Scaling up Guide</a
-    >.
-  </p>
-  <p class="read-the-docs">Click on the Vite and Vue logos to learn more</p>
 </template>
 
 <style scoped>
-.read-the-docs {
-  color: #888;
+h1 {
+  text-align: center;
+}
+
+button {
+  margin-bottom: 10px;
+  padding: 8px 16px;
+  font-size: 16px;
+  cursor: pointer;
 }
 </style>
