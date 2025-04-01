@@ -3,12 +3,23 @@ import { ref, onMounted, computed } from 'vue';
 import PokemonList from './PokemonList.vue';
 import PokemonFilter from './PokemonFilter.vue';
 import PokemonSearch from './PokemonSearch.vue';
+import PokemonModal from './PokemonModal.vue';
 
 const pokemons = ref([]);
 const selectedType = ref(null);
 const searchQuery = ref('');
 const sortOrder = ref('none');
 const loading = ref(true);
+
+const selectedPokemon = ref(null);
+
+const openModal = (pokemon) => {
+  selectedPokemon.value = pokemon;
+};
+
+const closeModal = () => {
+  selectedPokemon.value = null;
+};
 
 const fetchPokemons = async () => {
   loading.value = true;
@@ -84,8 +95,9 @@ onMounted(fetchPokemons);
     <PokemonFilter @filter="filterPokemonsByType" :selected="selectedType" />
 
     <div v-if="loading">Chargement...</div>
+    <PokemonList :pokemons="filteredPokemons" @select="openModal" v-if="!loading" />
 
-    <PokemonList :pokemons="filteredPokemons" v-if="!loading" />
+    <PokemonModal :pokemon="selectedPokemon" v-if="selectedPokemon" @close="closeModal" />
   </div>
 </template>
 

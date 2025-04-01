@@ -2,11 +2,17 @@
 import PokemonCard from './PokemonCard.vue';
 
 defineProps(['pokemons']);
+defineEmits(['select']);
 </script>
 
 <template>
   <div class="pokemon-container">
-    <PokemonCard v-for="pokemon in pokemons" :key="pokemon.id" :pokemon="pokemon" />
+    <PokemonCard
+      v-for="pokemon in pokemons"
+      :key="pokemon.id"
+      :pokemon="pokemon"
+      @click="$emit('select', pokemon)"
+    />
   </div>
 </template>
 
