@@ -2,21 +2,24 @@
 import { ref, onMounted, computed } from 'vue';
 import PokemonList from './PokemonList.vue';
 import PokemonFilter from './PokemonFilter.vue';
+import PokemonSearch from './PokemonSearch.vue';
 
 const pokemons = ref([]);
 const selectedType = ref(null);
+const searchQuery = ref('');
+const sortOrder = ref('none');
 const loading = ref(true);
 
-// Récupérer les Pokémon
 const fetchPokemons = async () => {
-  loading.value = true; // Début du chargement
-  selectedType.value = null; // Réinitialisation du filtre
+  loading.value = true;
+  selectedType.value = null;
+  searchQuery.value = '';
+  sortOrder.value = 'none';
 
   try {
     const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151');
     const data = await response.json();
 
-    // Charger les détails de chaque Pokémon
     const detailedPokemons = await Promise.all(
       data.results.map(async (pokemon) => {
         const res = await fetch(pokemon.url);
@@ -28,20 +31,45 @@ const fetchPokemons = async () => {
   } catch (error) {
     console.error('Erreur lors de la récupération des Pokémon', error);
   } finally {
-    loading.value = false; // Fin du chargement
+    loading.value = false;
   }
 };
 
-// Filtrer les Pokémon par type
 const filteredPokemons = computed(() => {
-  if (!selectedType.value) return pokemons.value;
-  return pokemons.value.filter(pokemon =>
-    pokemon.types.some(t => t.type.name === selectedType.value)
-  );
+  let filtered = [...pokemons.value];
+
+  if (selectedType.value) {
+    filtered = filtered.filter(pokemon =>
+      pokemon.types.some(t => t.type.name === selectedType.value)
+    );
+  }
+
+  if (searchQuery.value) {
+    filtered = filtered.filter(pokemon =>
+      pokemon.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
+  }
+
+  if (sortOrder.value === 'asc') {
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortOrder.value === 'desc') {
+    filtered.sort((a, b) => b.name.localeCompare(a.name));
+  }
+
+  return filtered;
 });
 
+const updateSearch = ({ query, sort }) => {
+  searchQuery.value = query;
+  sortOrder.value = sort;
+};
+
 const filterPokemonsByType = (type) => {
-  selectedType.value = type;
+  if (selectedType.value === type) {
+    selectedType.value = null;
+  } else {
+    selectedType.value = type;
+  }
 };
 
 onMounted(fetchPokemons);
@@ -52,7 +80,8 @@ onMounted(fetchPokemons);
     <h1>Pokedex</h1>
     <button @click="fetchPokemons">Recharger les Pokémon</button>
 
-    <PokemonFilter @filter="filterPokemonsByType" />
+    <PokemonSearch @search="updateSearch" />
+    <PokemonFilter @filter="filterPokemonsByType" :selected="selectedType" />
 
     <div v-if="loading">Chargement...</div>
 
